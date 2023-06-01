@@ -67,7 +67,7 @@ class LockManager {
 	/**
 	 * Lock file
 	 */
-	public function lockFile(int $id, string $token = '', ?string $ownerId = null): ?string {
+	public function lockFile(int $id, string $token = '', int $e2eCounter, string $ownerId): ?string {
 		if ($this->isLocked($id, $token, $ownerId)) {
 			return null;
 		}
@@ -76,6 +76,13 @@ class LockManager {
 			$lock = $this->lockMapper->getByFileId($id);
 			return $lock->getToken() === $token ? $token : null;
 		} catch (DoesNotExistException $ex) {
+			$metaData = $this->metaDataStorage->getMetaData($ownerId, $id);
+			$decodedMetadata = json_decode($metaData, true);
+			// TODO, unsure counter is the proper property name.
+			if ($decodedMetadata['counter'] >= $e2eCounter) {
+				throw new NotPermittedException('Received counter is not greater than the stored one');
+			}
+
 			$newToken = $this->getToken();
 			$lockEntity = new Lock();
 			$lockEntity->setId($id);
