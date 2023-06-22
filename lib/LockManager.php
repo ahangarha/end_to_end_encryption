@@ -76,11 +76,15 @@ class LockManager {
 			$lock = $this->lockMapper->getByFileId($id);
 			return $lock->getToken() === $token ? $token : null;
 		} catch (DoesNotExistException $ex) {
-			$metaData = $this->metaDataStorage->getMetaData($ownerId, $id);
-			$decodedMetadata = json_decode($metaData, true);
-			// TODO, unsure counter is the proper property name.
-			if ($decodedMetadata['counter'] >= $e2eCounter) {
-				throw new NotPermittedException('Received counter is not greater than the stored one');
+			try {
+				$metaData = $this->metaDataStorage->getMetaData($ownerId, $id);
+				$decodedMetadata = json_decode($metaData, true);
+				// TODO: unsure counter is the proper property name.
+				if ($decodedMetadata['counter'] >= $e2eCounter) {
+					throw new NotPermittedException('Received counter is not greater than the stored one');
+				}
+			} catch (NotFoundException $e) {
+				// Do not check counter if the metadata do not exists yet.
 			}
 
 			$newToken = $this->getToken();
